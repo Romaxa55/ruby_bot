@@ -6,7 +6,7 @@ replicaCount: 1
 
 image:
   repository: ghcr.io/romaxa55/romaxa55/ruby_bot/ruby-bot
-  pullPolicy: IfNotPresent
+  pullPolicy: Always
   # Overrides the image tag whose default is the chart appVersion.
   tag: latest
 
