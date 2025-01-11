@@ -15,4 +15,10 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - name: Build the Docker image
-      run: docker build . --file Dockerfile --tag ruby-bot:$(date +%s)
+      uses: mr-smithers-excellent/docker-build-push@v6
+      with:
+        image: romaxa55/ruby_bot/ruby-bot
+        tags: latest
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ GITHUB_TOKEN }}
