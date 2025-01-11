@@ -13,4 +13,4 @@ COPY . .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Устанавливаем локальный сервер ADB, чтобы он автоматически запускался
-CMD ["python", "bot.py"]
+CMD ["python", "main.py"]
