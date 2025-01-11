@@ -33,22 +33,22 @@ spec:
             {{- toYaml .Values.securityContext | nindent 12 }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
-          ports:
-            - name: http
-              containerPort: {{ .Values.service.port }}
-              protocol: TCP
+{{/*          ports:*/}}
+{{/*            - name: http*/}}
+{{/*              containerPort: {{ .Values.service.port }}*/}}
+{{/*              protocol: TCP*/}}
           volumeMounts:
             - name: adb-keys
               mountPath: /root/.android
               readOnly: true
-          livenessProbe:
-            httpGet:
-              path: /
-              port: http
-          readinessProbe:
-            httpGet:
-              path: /
-              port: http
+{{/*          livenessProbe:*/}}
+{{/*            httpGet:*/}}
+{{/*              path: /*/}}
+{{/*              port: http*/}}
+{{/*          readinessProbe:*/}}
+{{/*            httpGet:*/}}
+{{/*              path: /*/}}
+{{/*              port: http*/}}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
       volumes:
