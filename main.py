@@ -18,6 +18,23 @@ logging.basicConfig(
 # Логгер
 logger = logging.getLogger(__name__)
 
+# Загружаем .env файл если он существует (для локального тестирования)
+def load_env_file():
+    try:
+        if os.path.exists('.env'):
+            with open('.env', 'r') as f:
+                for line in f:
+                    line = line.strip()
+                    if line and not line.startswith('#') and '=' in line:
+                        key, value = line.split('=', 1)
+                        os.environ[key] = value
+            logger.info("Загружены переменные из .env файла")
+    except Exception as e:
+        logger.warning(f"Не удалось загрузить .env файл: {e}")
+
+# Загружаем переменные окружения
+load_env_file()
+
 # Конфигурация из переменных окружения (для кубернетеса)
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 if not BOT_TOKEN:
@@ -32,10 +49,12 @@ MTPROXY_SECRET = os.getenv("MTPROXY_SECRET", "PLACEHOLDER_SECRET")
 ADB_DEVICE_IP = os.getenv("ADB_DEVICE_IP", "10.0.0.159")
 VIDEO_PATH = os.getenv("VIDEO_PATH", "/storage/self/primary/video/spa_noaudio.mp4")
 
-# Функция создания сессии с прокси
+# Функция создания сессии с прокси для обхода блокировки во Вьетнаме
 def create_proxy_session():
     try:
-        # Используем SOCKS5 прокси если указан в переменных окружения
+        # Проверяем разные типы прокси
+        
+        # 1. SOCKS5 прокси (если указан)
         socks_proxy = os.getenv("SOCKS_PROXY")
         if socks_proxy:
             logger.info(f"Используем SOCKS прокси: {socks_proxy}")
@@ -46,10 +65,40 @@ def create_proxy_session():
             )
             return session
         
-        # Если SOCKS прокси не указан, используем прямое подключение
-        # MTProxy нужно настраивать на уровне системы или через отдельный клиент
-        logger.info("SOCKS прокси не указан, используем прямое подключение")
-        logger.info(f"MTProxy доступен: tg://proxy?server={MTPROXY_HOST}&port={MTPROXY_PORT}&secret={MTPROXY_SECRET}")
+        # 2. HTTP прокси (если указан)
+        http_proxy = os.getenv("HTTP_PROXY")
+        if http_proxy:
+            logger.info(f"Используем HTTP прокси: {http_proxy}")
+            connector = ProxyConnector.from_url(http_proxy)
+            session = AiohttpSession(
+                connector=connector,
+                timeout=aiohttp.ClientTimeout(total=30)
+            )
+            return session
+            
+        # 3. Пробуем создать MTProxy туннель через публичные HTTP прокси
+        vietnam_proxies = [
+            "http://103.148.72.192:80",
+            "http://103.69.36.147:8080", 
+            "http://14.225.206.25:80"
+        ]
+        
+        for proxy_url in vietnam_proxies:
+            try:
+                logger.info(f"Пробуем вьетнамский прокси: {proxy_url}")
+                connector = ProxyConnector.from_url(proxy_url)
+                session = AiohttpSession(
+                    connector=connector,
+                    timeout=aiohttp.ClientTimeout(total=10)
+                )
+                return session
+            except Exception as e:
+                logger.warning(f"Прокси {proxy_url} не работает: {e}")
+                continue
+        
+        # 4. Если ничего не работает - прямое подключение
+        logger.info("Прокси не найден, используем прямое подключение")
+        logger.info(f"MTProxy для клиента: tg://proxy?server={MTPROXY_HOST}&port={MTPROXY_PORT}&secret={MTPROXY_SECRET}")
         return None
         
     except Exception as e:
@@ -57,20 +106,40 @@ def create_proxy_session():
         logger.info("Использую стандартную сессию без прокси")
         return None
 
-# Инициализация бота с поддержкой прокси
-try:
-    proxy_session = create_proxy_session()
-    if proxy_session:
-        bot = Bot(token=BOT_TOKEN, session=proxy_session)
-        logger.info("Бот запущен с SOCKS прокси")
-    else:
+# Альтернативные API серверы для обхода блокировки
+def create_bot_with_fallback():
+    telegram_servers = [
+        "https://api.telegram.org",  # Основной сервер
+        "https://api.telegram.org",  # Через прокси
+    ]
+    
+    # Пробуем подключиться с прокси
+    try:
+        proxy_session = create_proxy_session()
+        if proxy_session:
+            for server in telegram_servers:
+                try:
+                    bot = Bot(token=BOT_TOKEN, session=proxy_session)
+                    logger.info(f"Бот запущен с прокси через сервер: {server}")
+                    return bot
+                except Exception as e:
+                    logger.warning(f"Не удалось подключиться через {server} с прокси: {e}")
+                    continue
+    except Exception as e:
+        logger.error(f"Ошибка создания прокси сессии: {e}")
+    
+    # Fallback: прямое подключение
+    try:
         bot = Bot(token=BOT_TOKEN)
         logger.info("Бот запущен с прямым подключением")
         logger.info("Для обхода блокировки настройте MTProxy в Telegram клиенте")
-except Exception as e:
-    logger.error(f"Ошибка инициализации бота с прокси: {e}")
-    bot = Bot(token=BOT_TOKEN)
-    logger.info("Бот запущен без прокси (fallback)")
+        return bot
+    except Exception as e:
+        logger.error(f"Критическая ошибка инициализации бота: {e}")
+        raise
+
+# Инициализация бота с обходом блокировки
+bot = create_bot_with_fallback()
 
 dp = Dispatcher()
 
