@@ -78,7 +78,7 @@ async def create_bot_with_proxy():
             logger.info(f"✅ SOCKS5 прокси работает! Бот @{result.username} подключен к Telegram")
             return bot
         
-            except asyncio.TimeoutError:
+        except asyncio.TimeoutError:
             logger.error("❌ Таймаут подключения через SOCKS прокси")
             try:
                 await bot.session.close()

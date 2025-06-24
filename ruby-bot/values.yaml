@@ -5,7 +5,7 @@
 replicaCount: 1
 
 image:
-  repository: romaxa55/ruby-bot
+  repository: ghcr.io/romaxa55/romaxa55/ruby_bot/ruby-bot
   pullPolicy: Always
   tag: "latest"
 

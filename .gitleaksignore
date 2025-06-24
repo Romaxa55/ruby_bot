@@ -1,0 +1,6 @@
+# MTProxy public secret - not sensitive
+bcfb182a1bafbc16ea92652628133c07
+
+# Исключаем .env файлы (должны быть в gitignore)
+.env
+.env.* 
