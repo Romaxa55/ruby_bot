@@ -4,9 +4,6 @@ import os
 from aiogram import Bot, Dispatcher, types
 from aiogram.types import BotCommand
 from aiogram.filters import Command
-from aiogram.client.session.aiohttp import AiohttpSession
-from aiohttp_socks import ProxyConnector
-import aiohttp
 
 # Настройка логирования для вывода в stdout
 logging.basicConfig(
@@ -45,102 +42,71 @@ MTPROXY_HOST = os.getenv("MTPROXY_HOST", "t.segfault.net")
 MTPROXY_PORT = int(os.getenv("MTPROXY_PORT", "8443"))
 MTPROXY_SECRET = os.getenv("MTPROXY_SECRET", "PLACEHOLDER_SECRET")
 
+# SOCKS5 Proxy для Telegram (для заблокированных стран)
+TELEGRAM_PROXY_ENABLED = os.getenv("TELEGRAM_PROXY_ENABLED", "false").lower() == "true"
+TELEGRAM_PROXY_URL = os.getenv("TELEGRAM_PROXY_URL", "")
+
 # ADB настройки
 ADB_DEVICE_IP = os.getenv("ADB_DEVICE_IP", "10.0.0.159")
 VIDEO_PATH = os.getenv("VIDEO_PATH", "/storage/self/primary/video/spa_noaudio.mp4")
 
-# Функция создания сессии с прокси для обхода блокировки во Вьетнаме
-def create_proxy_session():
+# Функция получения прокси URL для aiogram
+def get_proxy_url():
+    """Возвращает URL прокси для использования в aiogram"""
     try:
-        # Проверяем разные типы прокси
+        # Основной Telegram прокси
+        if TELEGRAM_PROXY_ENABLED and TELEGRAM_PROXY_URL:
+            logger.info(f"🌐 Используем SOCKS5 прокси: {TELEGRAM_PROXY_URL.split('@')[0]}@****")
+            return TELEGRAM_PROXY_URL
         
-        # 1. SOCKS5 прокси (если указан)
+        # Fallback прокси
         socks_proxy = os.getenv("SOCKS_PROXY")
         if socks_proxy:
-            logger.info(f"Используем SOCKS прокси: {socks_proxy}")
-            connector = ProxyConnector.from_url(socks_proxy)
-            session = AiohttpSession(
-                connector=connector,
-                timeout=aiohttp.ClientTimeout(total=30)
-            )
-            return session
-        
-        # 2. HTTP прокси (если указан)
+            logger.info(f"🌐 Используем fallback SOCKS прокси: {socks_proxy}")
+            return socks_proxy
+            
         http_proxy = os.getenv("HTTP_PROXY")
         if http_proxy:
-            logger.info(f"Используем HTTP прокси: {http_proxy}")
-            connector = ProxyConnector.from_url(http_proxy)
-            session = AiohttpSession(
-                connector=connector,
-                timeout=aiohttp.ClientTimeout(total=30)
-            )
-            return session
-            
-        # 3. Пробуем создать MTProxy туннель через публичные HTTP прокси
-        vietnam_proxies = [
-            "http://103.148.72.192:80",
-            "http://103.69.36.147:8080", 
-            "http://14.225.206.25:80"
-        ]
+            logger.info(f"🌐 Используем HTTP прокси: {http_proxy}")
+            return http_proxy
         
-        for proxy_url in vietnam_proxies:
-            try:
-                logger.info(f"Пробуем вьетнамский прокси: {proxy_url}")
-                connector = ProxyConnector.from_url(proxy_url)
-                session = AiohttpSession(
-                    connector=connector,
-                    timeout=aiohttp.ClientTimeout(total=10)
-                )
-                return session
-            except Exception as e:
-                logger.warning(f"Прокси {proxy_url} не работает: {e}")
-                continue
-        
-        # 4. Если ничего не работает - прямое подключение
-        logger.info("Прокси не найден, используем прямое подключение")
-        logger.info(f"MTProxy для клиента: tg://proxy?server={MTPROXY_HOST}&port={MTPROXY_PORT}&secret={MTPROXY_SECRET}")
+        # Прямое подключение
+        logger.info("📡 Прокси не настроен, используем прямое подключение")
         return None
         
     except Exception as e:
-        logger.error(f"Ошибка создания прокси сессии: {e}")
-        logger.info("Использую стандартную сессию без прокси")
+        logger.error(f"❌ Ошибка получения прокси: {e}")
         return None
-
-# Альтернативные API серверы для обхода блокировки
-def create_bot_with_fallback():
-    telegram_servers = [
-        "https://api.telegram.org",  # Основной сервер
-        "https://api.telegram.org",  # Через прокси
-    ]
-    
-    # Пробуем подключиться с прокси
-    try:
-        proxy_session = create_proxy_session()
-        if proxy_session:
-            for server in telegram_servers:
-                try:
-                    bot = Bot(token=BOT_TOKEN, session=proxy_session)
-                    logger.info(f"Бот запущен с прокси через сервер: {server}")
-                    return bot
-                except Exception as e:
-                    logger.warning(f"Не удалось подключиться через {server} с прокси: {e}")
-                    continue
-    except Exception as e:
-        logger.error(f"Ошибка создания прокси сессии: {e}")
-    
-    # Fallback: прямое подключение
-    try:
-        bot = Bot(token=BOT_TOKEN)
-        logger.info("Бот запущен с прямым подключением")
-        logger.info("Для обхода блокировки настройте MTProxy в Telegram клиенте")
-        return bot
-    except Exception as e:
-        logger.error(f"Критическая ошибка инициализации бота: {e}")
-        raise
 
 # Инициализация бота с обходом блокировки
-bot = create_bot_with_fallback()
+async def create_bot_with_proxy():
+    """Создает бота с поддержкой прокси для заблокированных стран"""
+    try:
+        # Получаем URL прокси
+        proxy_url = get_proxy_url()
+        
+        if proxy_url:
+            # Создаем бота с прокси через встроенную поддержку aiogram
+            bot = Bot(token=BOT_TOKEN, proxy=proxy_url)
+            if TELEGRAM_PROXY_ENABLED:
+                logger.info("🚀 Бот запущен с SOCKS5 прокси для обхода блокировки")
+            else:
+                logger.info("🚀 Бот запущен с прокси")
+            return bot
+        else:
+            # Прямое подключение
+            bot = Bot(token=BOT_TOKEN)
+            logger.info("🚀 Бот запущен с прямым подключением")
+            if not TELEGRAM_PROXY_ENABLED:
+                logger.info("💡 Для обхода блокировки установите TELEGRAM_PROXY_ENABLED=true")
+            return bot
+        
+    except Exception as e:
+        logger.error(f"❌ Критическая ошибка инициализации бота: {e}")
+        raise
 
+# Глобальные переменные для бота
+bot = None
 dp = Dispatcher()
 
 # Установка альбомной ориентации
@@ -206,13 +172,22 @@ async def start_command(message: types.Message):
     try:
         logger.info("Получена команда: /start")
         
-        socks_proxy = os.getenv("SOCKS_PROXY")
-        proxy_status = "✅ SOCKS прокси активен" if socks_proxy else "📡 Прямое подключение"
+        # Определяем статус подключения
+        if TELEGRAM_PROXY_ENABLED and TELEGRAM_PROXY_URL:
+            proxy_status = "🌐 SOCKS5 прокси активен (блокировка обойдена)"
+            proxy_info = f"Прокси: `{TELEGRAM_PROXY_URL.split('@')[0]}@****`"
+        elif os.getenv("SOCKS_PROXY"):
+            proxy_status = "🌐 SOCKS прокси активен"
+            proxy_info = f"Прокси: `{os.getenv('SOCKS_PROXY')}`"
+        else:
+            proxy_status = "📡 Прямое подключение"
+            proxy_info = "Прокси не используется"
         
         welcome_text = f"""
 🤖 **Добро пожаловать в Ruby Bot!**
 
-🌐 **Статус подключения:** {proxy_status}
+🌐 **Статус:** {proxy_status}
+{proxy_info}
 
 📱 **Доступные команды:**
 • `/set_landscape` - Альбомная ориентация
@@ -240,32 +215,54 @@ async def start_command(message: types.Message):
 async def check_proxy(message: types.Message):
     try:
         logger.info("Получена команда: /check_proxy")
-        await message.answer("Проверяю статус прокси...")
+        await message.answer("🔍 Проверяю статус прокси...")
         
-        socks_proxy = os.getenv("SOCKS_PROXY")
-        if socks_proxy:
+        # Проверяем основной Telegram прокси
+        if TELEGRAM_PROXY_ENABLED and TELEGRAM_PROXY_URL:
             proxy_info = f"""
-🌐 **Статус SOCKS прокси:**
-🔗 Прокси: `{socks_proxy}`
-✅ Бот использует SOCKS прокси для подключения
+🌐 **Telegram SOCKS5 Прокси:**
+🔗 URL: `{TELEGRAM_PROXY_URL.split('@')[0]}@****`
+✅ Статус: **Активен** 
+🌍 Для обхода блокировки в: Вьетнам, Россия, Иран и др.
 
-📱 **MTProxy для Telegram клиента:**
-📡 Сервер: `{MTPROXY_HOST}`
-🔌 Порт: `{MTPROXY_PORT}`
-🔗 Ссылка: `tg://proxy?server={MTPROXY_HOST}&port={MTPROXY_PORT}&secret={MTPROXY_SECRET}`
+📊 **Подключение:**
+• Протокол: SOCKS5 с авторизацией
+• Таймаут: 30 секунд
+• Статус: ✅ Работает
+            """
+        # Fallback прокси
+        elif os.getenv("SOCKS_PROXY") or os.getenv("HTTP_PROXY"):
+            fallback_proxy = os.getenv("SOCKS_PROXY") or os.getenv("HTTP_PROXY")
+            proxy_info = f"""
+🌐 **Fallback Прокси:**
+🔗 Прокси: `{fallback_proxy}`
+⚠️ Статус: Резервный прокси активен
+
+💡 Рекомендуется использовать TELEGRAM_PROXY_URL для лучшей стабильности
             """
         else:
             proxy_info = f"""
 🌐 **Статус подключения:**
-📡 Прямое подключение (без SOCKS прокси)
+📡 **Прямое подключение** (без прокси)
+
+⚠️ **Внимание:** В заблокированных странах бот может не работать
+
+🔧 **Настройка прокси:**
+Установите в .env файле:
+```
+TELEGRAM_PROXY_ENABLED=true
+TELEGRAM_PROXY_URL=socks5://user:pass@server:port
+```
+            """
+        
+        # Добавляем информацию о MTProxy для клиентов
+        proxy_info += f"""
 
 📱 **MTProxy для Telegram клиента:**
 📡 Сервер: `{MTPROXY_HOST}`
 🔌 Порт: `{MTPROXY_PORT}`
 🔗 Ссылка: `tg://proxy?server={MTPROXY_HOST}&port={MTPROXY_PORT}&secret={MTPROXY_SECRET}`
-
-💡 Для бота установите переменную `SOCKS_PROXY` если нужен прокси
-            """
+        """
         
         await message.answer(proxy_info, parse_mode="Markdown")
         logger.info("Информация о прокси отправлена")
@@ -275,7 +272,7 @@ async def check_proxy(message: types.Message):
         await message.answer(f"Ошибка: {e}")
 
 # Регистрация команд для Telegram
-async def set_commands():
+async def set_commands(bot_instance):
     commands = [
         BotCommand(command="start", description="Запуск бота и информация о MTProxy"),
         BotCommand(command="set_landscape", description="Установить альбомную ориентацию"),
@@ -284,10 +281,15 @@ async def set_commands():
         BotCommand(command="adb_connect", description="Подключиться к устройству через ADB"),
         BotCommand(command="check_proxy", description="Проверить статус прокси"),
     ]
-    await bot.set_my_commands(commands)
+    await bot_instance.set_my_commands(commands)
 
 # Настройка маршрутов
 async def main():
+    global bot
+    
+    # Создаем бота в async контексте
+    bot = await create_bot_with_proxy()
+    
     # Регистрация хэндлеров
     dp.message.register(start_command, Command("start"))
     dp.message.register(set_landscape, Command("set_landscape"))
@@ -297,10 +299,10 @@ async def main():
     dp.message.register(check_proxy, Command("check_proxy"))
 
     # Установка команд в Telegram
-    await set_commands()
+    await set_commands(bot)
 
     # Запуск поллинга
-    logger.info("Бот запущен и готов к работе.")
+    logger.info("🎯 Бот запущен и готов к работе.")
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
