@@ -1,0 +1,12 @@
+title = "gitleaks config"
+
+[allowlist]
+description = "MTProxy public secrets and .env files"
+regexes = [
+    "bcfb182a1bafbc16ea92652628133c07",
+]
+
+paths = [
+    ".*\\.env.*",
+    "\\.env",
+] 
