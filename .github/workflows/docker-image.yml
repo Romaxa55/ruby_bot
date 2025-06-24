@@ -17,8 +17,8 @@ jobs:
     - name: Build the Docker image
       uses: mr-smithers-excellent/docker-build-push@v6
       with:
-        image: romaxa55/ruby_bot/ruby-bot
+        image: romaxa55/ruby-bot
         tags: latest
-        registry: ghcr.io
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
+        registry: docker.io
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}

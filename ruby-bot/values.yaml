@@ -6,7 +6,7 @@ replicaCount: 1
 
 image:
   repository: romaxa55/ruby-bot
-  pullPolicy: IfNotPresent
+  pullPolicy: Always
   tag: "latest"
 
 # Секреты (создаются отдельно)
