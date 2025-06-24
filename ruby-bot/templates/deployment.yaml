@@ -33,6 +33,22 @@ spec:
             {{- toYaml .Values.securityContext | nindent 12 }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            # Секреты из Kubernetes Secret
+            - name: BOT_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "ruby-bot.fullname" . }}-secrets
+                  key: bot-token
+            - name: TELEGRAM_PROXY_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "ruby-bot.fullname" . }}-secrets
+                  key: socks-proxy
+          envFrom:
+            # Конфигурация из ConfigMap
+            - configMapRef:
+                name: {{ include "ruby-bot.fullname" . }}-config
 {{/*          ports:*/}}
 {{/*            - name: http*/}}
 {{/*              containerPort: {{ .Values.service.port }}*/}}

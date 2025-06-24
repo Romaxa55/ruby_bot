@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "ruby-bot.fullname" . }}-config
+  labels:
+    {{- include "ruby-bot.labels" . | nindent 4 }}
+data:
+  MTPROXY_HOST: {{ .Values.config.mtproxy.host | quote }}
+  MTPROXY_PORT: {{ .Values.config.mtproxy.port | quote }}
+  MTPROXY_SECRET: {{ .Values.config.mtproxy.secret | quote }}
+  ADB_DEVICE_IP: {{ .Values.config.adb.deviceIp | quote }}
+  VIDEO_PATH: {{ .Values.config.adb.videoPath | quote }}
+  TELEGRAM_PROXY_ENABLED: "true" 
