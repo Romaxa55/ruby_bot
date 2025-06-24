@@ -1,1 +1,10 @@
 .idea
+.env
+.env.local
+.env.production
+*.key
+*.pem
+deploy.sh
+__pycache__/
+*.pyc
+.venv/
