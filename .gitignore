@@ -33,5 +33,4 @@ pip-delete-this-directory.txt
 .env.production
 *.key
 *.pem
-deploy.sh
 .env
