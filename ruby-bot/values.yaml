@@ -5,9 +5,9 @@
 replicaCount: 1
 
 image:
-  repository: ghcr.io/romaxa55/romaxa55/ruby_bot/ruby-bot
+  repository: ghcr.io/romaxa55/romaxa55/ruby_bot
   pullPolicy: Always
-  tag: "latest"
+  tag: "v19"
 
 # Секреты (создаются отдельно)
 secrets:
