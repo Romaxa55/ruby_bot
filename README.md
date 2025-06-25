@@ -46,7 +46,7 @@ cp .env.example .env
 ```bash
 # Основные настройки
 BOT_TOKEN=your_bot_token_here
-ADB_DEVICE_IP=10.0.0.159
+ADB_DEVICE_IP=192.168.1.100
 VIDEO_PATH=/storage/self/primary/video/spa_noaudio.mp4
 
 # Прокси (опционально, для обхода блокировок)

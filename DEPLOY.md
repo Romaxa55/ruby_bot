@@ -14,7 +14,7 @@ MTPROXY_SECRET="YOUR_MTPROXY_SECRET_HERE"
 # Optional configuration
 MTPROXY_HOST="t.segfault.net"          # MTProxy server
 MTPROXY_PORT="8443"                    # MTProxy port
-ADB_DEVICE_IP="10.0.0.159"             # Android device IP
+ADB_DEVICE_IP="192.168.1.100"           # Android device IP
 VIDEO_PATH="/storage/self/primary/video/spa_noaudio.mp4"
 SOCKS_PROXY="socks5://proxy:1080"      # Optional SOCKS proxy for bot
 ```

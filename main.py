@@ -48,7 +48,7 @@ TELEGRAM_PROXY_ENABLED = os.getenv("TELEGRAM_PROXY_ENABLED", "false").lower() ==
 TELEGRAM_PROXY_URL = os.getenv("TELEGRAM_PROXY_URL", "")
 
 # ADB настройки
-ADB_DEVICE_IP = os.getenv("ADB_DEVICE_IP", "10.0.0.159")
+ADB_DEVICE_IP = os.getenv("ADB_DEVICE_IP", "192.168.1.100")
 VIDEO_PATH = os.getenv("VIDEO_PATH", "/storage/self/primary/video/spa_noaudio.mp4")
 
 # SOCKS прокси из переменных окружения

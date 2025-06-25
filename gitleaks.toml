@@ -1,12 +1,35 @@
 title = "gitleaks config"
 
+[extend]
+# Gitleaks configuration for Ruby Bot
+# Excludes public MTProxy secrets but catches real secrets
+
+[[rules]]
+id = "bot-token"
+description = "Telegram Bot Token"
+regex = '''\d{10}:\w{35}'''
+entropy = 3.5
+
+[[rules]]
+id = "private-key"  
+description = "Private Key"
+regex = '''-----BEGIN (RSA )?PRIVATE KEY-----'''
+
+[[rules]]
+id = "socks-proxy"
+description = "SOCKS5 Proxy with credentials"
+regex = '''socks5://\w+:[^@\s]+@[\d\.]+:\d+'''
+
 [allowlist]
-description = "MTProxy public secrets and .env files"
-regexes = [
-    "bcfb182a1bafbc16ea92652628133c07",
+description = "Allowlist for known safe values"
+paths = [
+    '''**/.env.example''',
+    '''**/README.md''',
+    '''**/DEPLOY.md''',
 ]
 
-paths = [
-    ".*\\.env.*",
-    "\\.env",
+# Known public MTProxy secrets (safe to expose)
+regexes = [
+    '''bcfb182a1bafbc16ea92652628133c07''',  # Public MTProxy secret
+    '''t\.segfault\.net''',                   # Public MTProxy server
 ] 
